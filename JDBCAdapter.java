@@ -1,21 +1,19 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- *
- * @author rose
- */
+ 
 
 import java.io.*;
 import java.sql.*;
 import java.util.*;
+// import com.microsoft.jdbc.sqlserver.SQLServerDriver;
+import java.io.*;
+import java.sql.*;
+import java.util.*;
+//import oracle.jdbc.driver.OracleDriver;
+ 
+
  
 
 public class JDBCAdapter {
-    Connection connection = null;
+    public Connection connection = null;
     Statement statement = null;
     public ResultSet resultSet = null;
     public ResultSetMetaData metaData = null;
@@ -28,10 +26,12 @@ public class JDBCAdapter {
     public boolean[] colIsNum = new boolean[0];
     public int[] colSizes = new int[0];
     public int[] colNullable = new int[0];
+    public String[] datatypes = new String[0];
     private int numberOfColumns = 0;
     int numberOfRows = 0;
     PrintStream ps = null;
     PrintWriter pw = null;
+    
     char output;
     public String dbms = "access";
     public String status = "broken";
@@ -39,7 +39,8 @@ public class JDBCAdapter {
     public boolean needMetaInfo = false;
     public String server;
     public static TreeSet<String> dburls = new TreeSet<String>();
-
+    byte mode = 0;
+    
      
     public static int maxrows(String format) {
         if (format.equals("Table") || format.equals("LognForm")) {
@@ -47,33 +48,37 @@ public class JDBCAdapter {
         }
         return 65535;
     }
-
+    static public void main1(String [] args)
+    {
+      String d = "sun.jdbc.odbc.JdbcOdbcDriver";
+       String s = "jdbc:odbc:Driver={Microsoft Access Driver (*.mdb)};DBQ=C:/project/gfc/dbFileFolder/tlm.mdb";
+        String u = "";
+        String p = "";
+        JDBCAdapter adapter = new JDBCAdapter(s,d,u,p );
+        adapter.executeQuery("select * from AppUser");
+        adapter.close();
+    }
     public static void main(String[] args) {
-       String driver = "org.h2.Driver";
-       String server = "jdbc:h2:~/test1"; 
-       //String driver = "com.mysql.jdbc.Driver";
-      // String server = "jdbc:h2:tcp://localhost/~/test"; 
-       String  user = "sa";
-       String  pass  = "";
-       JDBCAdapter.testit2(server, driver, user, pass);
+        String user = "";
+        String pass = "";
+        String server = "jdbc:derby://localhost:1527/sample";
+        user = "app";
+        pass = "tomcat";
+        String driver = "org.apache.derby.jdbc.ClientDriver";
+        String sql = "SELECT objective FROM Course";
+        JDBCAdapter.testit(server, driver, user, pass, sql );
     }
 
-    static void testit2(String server, String driver, String user, String pass) {
-        JDBCAdapter adapter = new JDBCAdapter(server, driver, user, pass, System.out);
+    static void testit2(String server, String driver, String user, String pass ) {
+        JDBCAdapter adapter = new JDBCAdapter(server, driver, user, pass, System.out );
         String sql0 = "CREATE TABLE Student(id VARCHAR(10), name VARCHAR(30))";
         String sql1 = "INSERT INTO Student(id) VALUES('D10012345');";
-        String sql2 = "CREATE TABLE Student(id 10, name 30)";
-        String sql3 = "INSERT INTO Student(id) VALUES('D10012346');";
         String sql = "SELECT * FROM Student";
-        int x = adapter.executeUpdate(sql0);
-        x = adapter.executeUpdate(sql2);
-        //System.out.println("number of records of affected = " + x);
-        x = adapter.executeUpdate(sql1);
-        x = adapter.executeUpdate(sql3);
-        System.out.println("number of records of affected = " + x);
+        int x = adapter.executeUpdate(sql1);
+        
         x = adapter.executeQuery(sql);
-        System.out.println("number of records of retrived = " + x);
-       // adapter.print();
+        
+        adapter.print();
         adapter.println(adapter.error());
         adapter.close();
     }
@@ -93,29 +98,27 @@ public class JDBCAdapter {
         return tt;
     }
 
-    static void testit(String server, String driver, String user, String pass, String sql) {
-        JDBCAdapter adapter = new JDBCAdapter(server, driver, user, pass, System.out);
+    static void testit(String server, String driver, String user, String pass, String sql ) {
+        JDBCAdapter adapter = new JDBCAdapter(server, driver, user, pass, System.out );
         String t = adapter.dbms;
         String tt = adapter.keyFields("AppUser");
         int n = -1;
         try {
             n = adapter.executeQuery(sql);
             String[] ft = new String[3];
-            
+           
         }
         catch (Exception e) {
             // empty catch block
         }
-        for (int i = 0; i < n; ++i) {
-            System.out.println(adapter.getParameter(2));
-        }
+        
         adapter.println(adapter.error());
         adapter.print();
         adapter.close();
     }
 
     public String error() {
-        return (this.errormsg.toString());
+        return  (this.errormsg.toString());
     }
 
     public String dbInfo() {
@@ -139,6 +142,7 @@ public class JDBCAdapter {
         this.pw = out;
         this.output = 119;
         this.init(server, driver, user, pass);
+       
     }
 
     void print(String str) {
@@ -167,7 +171,8 @@ public class JDBCAdapter {
 
      
 
-    public JDBCAdapter(String url, String driverName, String user, String passwd) {
+    public JDBCAdapter(String url, String driverName, String user, String passwd ) {
+        
         this.debug = false;
         if (url == null || driverName == null) {
             this.errormsg.append("DB url or driver is null");
@@ -176,15 +181,17 @@ public class JDBCAdapter {
         }
     }
 
-    public JDBCAdapter(String url, String driverName, String user, String passwd, PrintWriter out) {
+    public JDBCAdapter(String url, String driverName, String user, String passwd, PrintWriter out ) {
         this.pw = out;
         this.output = 119;
+       
         this.init(url, driverName, user, passwd);
     }
 
-    public JDBCAdapter(String url, String driverName, String user, String passwd, PrintStream out) {
+    public JDBCAdapter(String url, String driverName, String user, String passwd, PrintStream out ) {
         this.ps = out;
         this.output = 115;
+       
         this.init(url, driverName, user, passwd);
     }
 
@@ -212,10 +219,12 @@ public class JDBCAdapter {
         this.dburl = url.replaceFirst(".*/([^/]*)$", "$1");
         try {
             if (driverName.indexOf("oracle") >= 0) {
-              //  DriverManager.registerDriver((Driver)new OracleDriver());
+               // DriverManager.registerDriver((Driver)new OracleDriver());
             } else if (driverName.indexOf("microsoft") >= 0) {
-             //   DriverManager.registerDriver((Driver)new SQLServerDriver());
-            } else {
+              //  DriverManager.registerDriver((Driver)new SQLServerDriver());
+            } else if (driverName.indexOf("odbc") >= 0){
+                Class.forName(driverName);
+            }  else {
                 Class.forName(driverName).newInstance();
             }
             if (this.debug) {
@@ -228,30 +237,48 @@ public class JDBCAdapter {
                 this.connection = DriverManager.getConnection(url + ";create=true", properties);
             } else {
                 this.connection = DriverManager.getConnection(url, user, passwd);
+              
             }
             if (this.connection != null) {
                 this.statement = this.connection.createStatement();
                 DatabaseMetaData dm = this.connection.getMetaData();
+                
                 this.dbms = dm.getDatabaseProductName().toLowerCase();
-                if (this.dbms.indexOf("server") >= 0) {
+                if (this.dbms.indexOf("server") >= 0) 
+                {
                     this.dbms = "sqlserver";
-                } else if (this.dbms.indexOf("derby") >= 0) {
-                    this.dbms = "derby";
-                } else if (this.dbms.indexOf("postgres") >= 0) {
-                    this.dbms = "postgres";
-                } else if (this.dbms.indexOf("h2") >= 0) {
+                }  else if (this.dbms.indexOf("h2") >= 0) 
+                {
                     this.dbms = "h2";
-                } else if (this.dbms.indexOf("oracle") >= 0) {
+                } 
+                else if (this.dbms.indexOf("postgres") >= 0) 
+                {
+                    this.dbms = "postgres";
+                }
+                else if (this.dbms.indexOf("oracle") >= 0) 
+                {
                     this.dbms = "oracle";
                 } else if (this.dbms.indexOf("mysql") >= 0) {
                     this.dbms = "mysql";
                 } else if (this.dbms.indexOf("access") >= 0) {
                     this.dbms = "access";
                 }
+                else if (this.dbms.indexOf("derby") >= 0) 
+                {
+                    this.dbms = "derby";
+                } 
                 this.status = "open";
             } else if (this.debug) {
                 this.println("invalid");
             }
+        }
+        catch (NoClassDefFoundError e)
+        {
+             this.println("Driver class not exist");
+        }
+        catch (ClassNotFoundException e)
+        {
+             this.println("Driver class not exist");
         }
         catch (SQLException e) {
             this.println(  driverName + " or " + e.toString());
@@ -259,6 +286,7 @@ public class JDBCAdapter {
         catch (Exception e) {
             this.println(  driverName + " or " + e.toString());
         }
+         
     }
 
     public void profile() {
@@ -343,12 +371,14 @@ public class JDBCAdapter {
                 hasstate = false;
             }
             for (int i = n; i < m; ++i) {
-                this.statement.execute(querys[i]);
+               boolean kk = this.statement.execute(querys[i]);
+                
             }
             this.connection.commit();
             b = true;
         }
         catch (Exception e) {
+             
             this.connection.rollback();
         }
         finally {
@@ -364,6 +394,7 @@ public class JDBCAdapter {
     public int executeUpdate(String query) {
         return  executeUpdate( query, true);
     }
+    
     public int executeUpdate(String query, boolean delattach) {
         int i;
         if (this.dbms.equals("mysql")) {
@@ -371,43 +402,51 @@ public class JDBCAdapter {
         } else if (this.dbms.equals("h2")) {
             query = query.replaceAll(" mod ", " % ");
         }
+        query = query.replaceFirst("^[ |\t|\n|\r]+", "").replaceFirst("[ |\t|\n|\r]+", " ");
         int j = 0;
         int N = query.length();
-        if (N == 0) {
+        if (N == 0) 
+        {
             return 0;
         }
-        for (i = 0; i < N && query.charAt(i) != ' '; ++i) {
+        i = query.indexOf(" ");
+        if (i == -1)
+        {
+           
+            return 0;
         }
-        String act = query.substring(0, i).toLowerCase();
+        String act = query.substring(0,i).toLowerCase();
         boolean mody = true;
         String tablename = null;
         String att[] = null;
+        i++;
+        j = i;
+        for (; i < N && query.charAt(i) != ' ' && query.charAt(i) != '\t' && query.charAt(i) != '\n' && query.charAt(i) != '\r'; ++i) { }
+        String maybetbn = query.substring(j, i);
         if (act.indexOf("update") == 0) 
         {
-            for (; i < N && query.charAt(i) == ' '; ++i) {
-            }
-            j = i;
-            for (; i < N && query.charAt(i) != ' '; ++i) {
-            }
-            tablename = query.substring(j, i).toLowerCase();
-        } else 
+            tablename = maybetbn;
+        } 
+        else 
         {
-            
-            for (; i < N && query.charAt(i) == ' '; ++i) {
-            }
-            j = i;
-            for (; i < N && query.charAt(i) != ' '; ++i) {
-            }
-            if (!((tablename = query.substring(j, i).toLowerCase()).equals("table") || tablename.equals("into") || tablename.equals("from") || tablename.equals("database"))) {
-                this.println("Error: incorrect query:" + act + " " + tablename);
+          
+            maybetbn = maybetbn.toLowerCase().trim();
+            if (!maybetbn.equals("table") && !maybetbn.equals("into")  && !maybetbn.equals("from") && !maybetbn.equals("database") ) 
+            {
+               
+                this.println("Error: Incorrect Query:" + act + " " + tablename);
                 return -1;
             }
-            for (; i < N && query.charAt(i) == ' '; ++i) {
-            }
-            j = i;
-            for (; i < N && query.charAt(i) != ' '; ++i) {
-            }
-            tablename = query.substring(j, i).toLowerCase();
+         
+            String tmp = query.substring(i+1);
+            tmp = tmp.replaceFirst("^[ |\t|\n|\r]+", "");
+            tmp = tmp.replaceFirst("[ |\t|\n|\r]+", " ");
+          
+            i = tmp.indexOf(" ");
+            if (i == -1) i = tmp.length();
+         
+            tablename = tmp.substring(0, i).toLowerCase();
+           
             if (delattach && act.indexOf("delete") == 0)
             {
                 String querya = query.replaceFirst("^[D|d][E|e][L|e][E|e][T|t][E|e]", "SELECT attach ");
@@ -422,28 +461,31 @@ public class JDBCAdapter {
                         att[k] = getValueAt(0,k);
                     }
                 }
-               
             }    
-         
         }
-        if (tablename.equals("") && query.indexOf("SET") != 0) {
-            this.println("Error: incorrect query");
+        
+        if (tablename.equals("") && query.indexOf("SET") != 0) 
+        {
+            this.println("Error: Query:'"  +query + "' is wrong, because it has no table");
             return -1;
         }
         this.errormsg.setLength(0);
         if (this.connection == null || this.statement == null) {
-            this.println("no connection");
+           
             return -1;
         }
         this.numberOfColumns = 0;
         int nrows = -1;
         String tb = this.dburl + "," + tablename;
-        while (JDBCAdapter.dburls.contains(tb)) {
+        
+        while (dburls.contains(tb)) 
+        {
             Thread.yield();
         }
-        JDBCAdapter.grabHandle(tb, true);
+        grabHandle(tb, true);
         try {
-            nrows = this.statement.executeUpdate( query );
+            
+            nrows = this.statement.executeUpdate(query);
             
             
         }
@@ -453,20 +495,21 @@ public class JDBCAdapter {
              
         }
         
-        JDBCAdapter.grabHandle(tb, false);
+        grabHandle(tb, false);
        
         return nrows;
     }
 
     static synchronized void grabHandle(String url, boolean get) {
         if (get) {
-            JDBCAdapter.dburls.add(url);
+            dburls.add(url);
         } else {
-            JDBCAdapter.dburls.remove(url);
+            dburls.remove(url);
         }
     }
 
     public int executeQuery(String query) {
+         mode = 0;
         String ss;
         if (this.dbms.equals("mysql")) {
             query = query.replaceAll("\\\\", "\\\\\\\\");
@@ -478,7 +521,7 @@ public class JDBCAdapter {
         this.numberOfColumns = 0;
         this.numberOfRows = 0;
         if (this.connection == null || this.statement == null) {
-            this.println("no connection");
+           
             return -1;
         }
         if (query == null || query.length() < 6) {
@@ -492,7 +535,7 @@ public class JDBCAdapter {
         try {
             this.numberOfColumns = 0;
             this.numberOfRows = 0;
-            this.resultSet = this.statement.executeQuery( query );
+            this.resultSet = this.statement.executeQuery(  query);
             this.metaData = this.resultSet.getMetaData();
             if (this.metaData == null) {
                 return -1;
@@ -542,20 +585,26 @@ public class JDBCAdapter {
         return this.numberOfRows;
     }
 
-    public void metainfo() {
-        try {
+    public void metainfo() 
+    {
+        try 
+        {
             this.columnNames = new String[this.numberOfColumns];
             this.colIsNum = new boolean[this.numberOfColumns];
             this.colSizes = new int[this.numberOfColumns];
             this.colNullable = new int[this.numberOfColumns];
-            for (int column = 0; column < this.numberOfColumns; ++column) {
+            this.datatypes = new String[this.numberOfColumns];
+            for (int column = 0; column < this.numberOfColumns; ++column) 
+            {
                 this.columnNames[column] = this.metaData.getColumnLabel(column + 1);
                 this.colIsNum[column] = this.isnum(column);
                 this.colSizes[column] = this.metaData.getColumnDisplaySize(column + 1);
                 this.colNullable[column] = this.metaData.isNullable(column + 1);
+                this.datatypes[column] = this.metaData.getColumnTypeName(column + 1);
             }
         }
-        catch (Exception e) {
+        catch (Exception e) 
+        {
             this.println("" + e);
         }
     }
@@ -566,24 +615,67 @@ public class JDBCAdapter {
         } else if (this.dbms.equals("h2")) {
             query = query.replaceAll(" mod ", " % ");
         }
+        mode = 2;
         this.errormsg.setLength(0);
-        try {
+        try 
+        {
             this.resultSet = this.statement.executeQuery(query);
-            if (mt) {
+            if (mt) 
+            {
                 this.metaData = this.resultSet.getMetaData();
+                this.numberOfColumns = this.metaData.getColumnCount();
+                metainfo();
             }
-            this.cursor = 0;
+            this.cursor = -1;
+            end = false;
             return true;
         }
-        catch (SQLException ex) {
-            this.println("Error:");
+        catch (SQLException ex) 
+        {
+            this.println("Error:*****************");
             this.println(ex.toString());
             return false;
         }
     }
+    
+    public String tocsv()
+    {
+        int m = getColumnCount();
+        int i = 0;
+        String s = "";
+        while(true) 
+        {
+            for(int j = 0; j < m; j++)
+            {
+                String tv =  getValueAt(i, j);
+                if (cursor < 0)
+                    break;
+                else if (j==0 && !s.equals(""))
+                    s  += "\n";
+                if (tv!=null)
+                {
+                    if (this.isnum(j)==false)
+                    {
+                         tv =  '"' + tv.replaceAll("\"","\"\"");
+                    }
+                    s += tv;
+                }
+                if(j < m-1)
+                {
+                    s += ",";
+                }
+            }
+           
+            if (cursor >= 0)
+                i++;
+            else 
+                break;
+        }
+        return s;
+    }
 
     public boolean nextRow() {
-        if (this.cursor == this.numberOfRows - 1) {
+        if ( cursor == this.numberOfRows - 1) {
             return false;
         }
         ++this.cursor;
@@ -603,12 +695,69 @@ public class JDBCAdapter {
         }
         return this.getValueAt(0, i);
     }
-
+     
+    public boolean end = false;
+    public boolean rewind()
+    {
+        boolean b = false;
+        try{
+           b = this.resultSet.first();
+        }catch(Exception e1){}
+        if (b) cursor = 0;
+        return b;
+    }
     public String getValueAt(int aRow, int aColumn) {
-        if (aRow >= this.numberOfRows || aColumn >= this.numberOfColumns) {
+        if (mode == 2)
+        {
+            if (aRow != cursor+1 && aRow != cursor)
+            {
+                return "After executeQuery2, you have to read data sequentially with row=0, 1, 2 ...";
+            }
+            if (cursor == -2)
+            {
+                return null;
+            }
+            if (aRow == cursor+1) 
+            {
+                try 
+                {
+                    if (this.resultSet.next())
+                    {
+                        cursor++;
+                    }
+                    else
+                    {
+                       end = true;
+                       cursor= -2; 
+                       return null;
+                    }
+                }
+                catch (Exception ex) 
+                {
+                    cursor = -2;
+                }
+            }
+             
+            if (cursor>=0)
+            {
+                try
+                {
+                    String x =  this.resultSet.getString(aColumn+1);
+                    return x;
+                }catch(Exception e){}
+            }
             return null;
         }
-        return this.rows[aRow][aColumn];
+        else if (mode == 0)
+        {
+            if (aRow >= this.numberOfRows || aColumn >= this.numberOfColumns) 
+            {
+                return null;
+            }
+            return this.rows[aRow][aColumn];
+        }
+        else
+            return null;
     }
 
     public void close() {
@@ -776,13 +925,16 @@ public class JDBCAdapter {
             return this.resultSet.getMetaData();
         }
         catch (SQLException ex) {
-            this.errormsg.append("error");
+            
             return null;
         }
     }
 
-    public String tabledef(String table ) {
-         
+    public String tabledef(String table, String targetdbms) {
+        boolean trans = false;
+        int sindex = -1;
+        int tindex = -1;
+       
         String keyfields = this.keyFields(table);
         String ans = "CREATE TABLE " + table + "(\n";
         int kk = 0;
@@ -795,7 +947,7 @@ public class JDBCAdapter {
             }
             for (int i = 0; i < kk; ++i) {
                 ans = ans + this.metaData.getColumnName(i + 1) + " ";
-                ans = ans + this.metaData.getColumnTypeName(i + 1) ;
+                ans = !trans ? ans + this.metaData.getColumnTypeName(i + 1) : ans +  this.metaData.getColumnTypeName(i + 1) ;
                 int ll = this.metaData.getColumnDisplaySize(i + 1);
                 if (!(ll >= 10000 || this.isnum(i))) {
                     ans = ans + "(" + ll + ")";
@@ -836,6 +988,67 @@ public class JDBCAdapter {
             x[i] = y[i];
         }
     }
-
+    
+    public int copyto(JDBCAdapter ada, String tbn)
+    {
+        executeQuery2("select * from " + tbn, true);
+        int i = 0;
+        int n=0;
+        while (true)
+        {
+        if (i==0) 
+        {
+           try{ if (resultSet.first() == false) break; }catch(Exception e){break;}
+        }
+        else
+        {
+            try{ if (resultSet.next() == false) break; }catch(Exception e){break;}
+        }
+       
+        String cmd = "INSERT INTO " + tbn + " values(";
+        for (int j=0; j < numberOfColumns; j++)
+        {
+            cmd += "?";
+            if (j < numberOfColumns-1) 
+                cmd += ",";
+        }
+        cmd += ")";
+        
+        try{
+           
+        PreparedStatement pst = ada.connection.prepareStatement(cmd);
+        for (int j=1; j <= numberOfColumns; j++)
+        {
+            if (datatypes[j-1].toLowerCase().equals("integer"))
+            {
+                pst.setInt(j, resultSet.getInt(j));
+            }
+            else if (datatypes[j-1].toLowerCase().equals("long"))
+            {
+                pst.setLong(j, resultSet.getLong(j));
+            }
+            else if (datatypes[j-1].toLowerCase().equals("double"))
+            {
+                pst.setDouble(j, resultSet.getDouble(j));
+            }
+            else if (datatypes[j-1].toLowerCase().equals("float"))
+            {
+                pst.setFloat(j, resultSet.getFloat(j));
+            }
+            if (datatypes[j-1].toLowerCase().equals("blob"))
+            {
+                pst.setBlob(j, resultSet.getBlob(j));
+            }
+            else 
+            {
+                pst.setString(j, resultSet.getString(j));
+            }
+        }
+         if (pst.executeUpdate()==1) n++;
+        }catch(Exception e){}
+        i++;
+    }
+    return n;
+    }
   
 }
